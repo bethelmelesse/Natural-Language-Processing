@@ -8,54 +8,119 @@ parent_dir = os.path.dirname(current_dir)
 grandparent_dir = os.path.dirname(parent_dir)
 sys.path.append(grandparent_dir)
 
-from transformer.encoder_stack import TransformerEncoder
-from transformer.decoder_stack import TransformerDecoder
+from encoder_stack import EncoderStack
+from decoder_stack import DecoderStack
+from embedding import InputEmbedding
 
 
 class Transformer(nn.Module):
-    def __init__(self, in_channel: int, hidden_channel: int, out_channel: int):
+    def __init__(
+        self,
+        source_vocab_size: int,
+        target_vocab_size: int,
+        max_seq_len: int = 512,
+        d_model: int = 512,
+        hidden_dim: int = None,
+        num_layers: int = 6,
+        num_heads: int = 8,
+    ):
         """Complete TransoTransformer model with encoder-decoder architecture."""
         super(Transformer, self).__init__()
 
-        # Initialize encoder and decoder stacks
-        self.encoder = TransformerEncoder(
-            in_channel=in_channel,
-            hidden_channel=hidden_channel,
-            out_channel=out_channel,
-            num_layers=6,
-            num_heads=8,
+        hidden_dim = hidden_dim or 4 * d_model
+
+        # Embeddings
+        self.source_embedding = InputEmbedding(
+            vocab_size=source_vocab_size, d_model=d_model, max_seq_len=max_seq_len
         )
-        self.decoder = TransformerDecoder(
-            in_channel=in_channel,
-            hidden_channel=hidden_channel,
-            out_channel=out_channel,
-            num_layers=6,
-            num_heads=8,
+        self.target_embedding = InputEmbedding(
+            vocab_size=target_vocab_size, d_model=d_model, max_seq_len=max_seq_len
+        )
+
+        # Initialize encoder and decoder stacks
+        self.encoder = EncoderStack(
+            d_model=d_model,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            num_heads=num_heads,
+        )
+        self.decoder = DecoderStack(
+            d_model=d_model,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            num_heads=num_heads,
         )
         # Final linear projection to output vocabulary
-        self.linear = nn.Linear(in_features=in_channel, out_features=out_channel)
-        # self.softmax = nn.Softmax(dim=-1)
+        self.linear = nn.Linear(in_features=d_model, out_features=target_vocab_size)
+
+        # Initialize weights
+        self._init_weights()
+
+    def _init_weights(self):
+        """Initialize weights (important for training stability)."""
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
 
     def forward(
-        self, input_source: torch.Tensor, input_target: torch.Tensor
+        self, source_input: torch.Tensor, target_input: torch.Tensor
     ) -> torch.Tensor:
         """Forward pass through the transformer.
 
         Args:
-            input_source: Source sequence tensor (e.g., English sentence)
-            input_target: Target sequence tensor (e.g., shifted French sentence)
+            source_input: Source sequence token indices (batch_size, src_seq_len)
+            target_input: Target sequence token indices (batch_size, tgt_seq_len)
 
         Returns:
-            logits: Output logits before softmax
+            logits: Output logits (batch_size, target_seq_len, target_vocab_size)
         """
+        # Embed inputs
+        source_embed = self.source_embedding(input_ids=source_input)
+        target_embed = self.target_embedding(input_ids=target_input)
 
-        # Encode the input sequence
-        encoder_output = self.encoder(encoder_input=input_source)
+        # Encode source sequence
+        encoder_output = self.encoder(encoder_input=source_embed)
 
-        # Decode using encoder output and decoder input
+        # Decode target sequence
         decoder_output = self.decoder(
-            encoder_output=encoder_output, decoder_input=input_target
+            encoder_output=encoder_output, decoder_input=target_embed
         )
         # Project to output vocabulary size
         logits = self.linear(decoder_output)
+
         return logits
+
+
+if __name__ == "__main__":
+    torch.manual_seed(42)
+
+    batch_size = 2
+    source_vocab_size = 200
+    target_vocab_size = 250
+
+    # Create dummy input
+    source_input = torch.rand(batch_size, source_vocab_size).long()
+    target_input = torch.rand(batch_size, target_vocab_size).long()
+
+    # Initialize encoder
+    model = Transformer(
+        source_vocab_size=source_vocab_size, target_vocab_size=target_vocab_size
+    )
+
+    # Run forward pass
+    logits = model(source_input=source_input, target_input=target_input)
+
+    # Print results
+    print(f"Source input shape:  {source_input.shape}")
+    print(f"Target input shape:  {target_input.shape}")
+    print(f"Output shape: {logits.shape}")
+
+    # Quick gradient check
+    loss = logits.mean()
+    loss.backward()
+
+    print("Backward pass successful — gradients computed.")
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            print(f"{name}: grad mean={param.grad.mean():.6f}")
+            break  # just show one example
