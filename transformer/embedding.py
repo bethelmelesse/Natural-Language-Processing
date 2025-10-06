@@ -35,7 +35,22 @@ class InputEmbedding(nn.Module):
         # Positional embeddings
         pos_embeds = self.positional_embedding(position_ids)
 
-        # Combine
+        # Combine token embeddings and positional embedding
         embeddings = token_embeds + pos_embeds
 
         return embeddings
+
+
+if __name__ == "__main__":
+    torch.manual_seed(42)
+
+    batch_size = 2
+    seq_length = 200
+
+    # Create dummy input
+    input_ids = torch.rand(batch_size, seq_length).long()
+    input_embeddings = InputEmbedding(vocab_size=seq_length)
+    embedding = input_embeddings(input_ids=input_ids)
+
+    print(f"Input shape:  {input_ids.shape}")
+    print(f"Output shape: {embedding.shape}")
