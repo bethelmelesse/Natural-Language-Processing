@@ -98,7 +98,7 @@ class Attention(nn.Module):
         official = torch.nn.functional.scaled_dot_product_attention(
             query=query, key=keys, value=values
         )
-        # assert torch.allclose(scaled_dot_product_attention_output, official)
+        assert torch.allclose(scaled_dot_product_attention_output, official, atol=1e-05)
 
         # Concatenate the dimensions
         attention_output = scaled_dot_product_attention_output.view(
