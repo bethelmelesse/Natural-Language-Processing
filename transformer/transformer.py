@@ -50,6 +50,7 @@ class Transformer(nn.Module):
             num_layers=num_layers,
             num_heads=num_heads,
         )
+
         # Final linear projection to output vocabulary
         self.linear = nn.Linear(in_features=d_model, out_features=target_vocab_size)
 
@@ -62,21 +63,19 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(
-        self, source_input: torch.Tensor, target_input: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, source: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Forward pass through the transformer.
 
         Args:
-            source_input: Source sequence token indices (batch_size, src_seq_len)
-            target_input: Target sequence token indices (batch_size, tgt_seq_len)
+            source: Source sequence token indices (batch_size, source_seq_len)
+            target: Target sequence token indices (batch_size, target_seq_len)
 
         Returns:
             logits: Output logits (batch_size, target_seq_len, target_vocab_size)
         """
         # Embed inputs
-        source_embed = self.source_embedding(input_ids=source_input)
-        target_embed = self.target_embedding(input_ids=target_input)
+        source_embed = self.source_embedding(input_ids=source)
+        target_embed = self.target_embedding(input_ids=target)
 
         # Encode source sequence
         encoder_output = self.encoder(encoder_input=source_embed)
@@ -95,24 +94,24 @@ if __name__ == "__main__":
     torch.manual_seed(42)
 
     batch_size = 2
-    source_vocab_size = 200
-    target_vocab_size = 250
+    source_seq_size = 200
+    target_seq_size = 250
 
     # Create dummy input
-    source_input = torch.rand(batch_size, source_vocab_size).long()
-    target_input = torch.rand(batch_size, target_vocab_size).long()
+    source = torch.rand(batch_size, source_seq_size).long()
+    target = torch.rand(batch_size, target_seq_size).long()
 
     # Initialize encoder
     model = Transformer(
-        source_vocab_size=source_vocab_size, target_vocab_size=target_vocab_size
+        source_vocab_size=source_seq_size, target_vocab_size=target_seq_size
     )
 
     # Run forward pass
-    logits = model(source_input=source_input, target_input=target_input)
+    logits = model(source=source, target=target)
 
     # Print results
-    print(f"Source input shape:  {source_input.shape}")
-    print(f"Target input shape:  {target_input.shape}")
+    print(f"Source input shape:  {source.shape}")
+    print(f"Target input shape:  {target.shape}")
     print(f"Output shape: {logits.shape}")
 
     # Quick gradient check
