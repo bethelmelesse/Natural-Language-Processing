@@ -74,7 +74,7 @@ class Attention(nn.Module):
         values = self.v_proj(x)
 
         # Reshape for multi-head attention
-        # --- Shape: (batch_size, seq_length, num_heads, dim)
+        # --- Shape: (batch_size, seq_length, dim) -> (batch_size, seq_length, num_heads, dim)
         batch_size = x.shape[0]
         seq_length = x.shape[1]
 
@@ -101,28 +101,49 @@ class Attention(nn.Module):
 
         # Concatenate the dimensions
         attention_output = scaled_dot_product_attention_output.view(
-            seq_length, self.num_heads * self.dim
+            batch_size, seq_length, self.num_heads * self.dim
         )
 
         # Apply project output
-        attention_output = self.out_proj(scaled_dot_product_attention_output)
+        attention_output = self.out_proj(attention_output)
 
         return attention_output
 
 
 if __name__ == "__main__":
-    batch_size = 1
-    num_samples = 5
+    torch.manual_seed(42)
+
+    batch_size = 2
+    seq_len = 5
     in_dim = 6
-    out_dim = 4
+    out_dim = 8
+    num_heads = 2
 
-    attention_fn = Attention(in_channel=in_dim, out_channel=out_dim)
+    attention_fn = Attention(
+        in_channel=in_dim, out_channel=out_dim, num_heads=num_heads
+    )
 
-    x = torch.rand(batch_size, num_samples, in_dim)
-    y = torch.rand(batch_size, num_samples, in_dim)
+    # Inputs
+    x = torch.rand(batch_size, seq_len, in_dim)
+    y = torch.rand(batch_size, seq_len, in_dim)
 
+    print("=== Testing Self-Attention ===")
     self_attention_output = attention_fn(x=x)
+    print(f"Self-attention output shape: {self_attention_output.shape}\n")
 
+    print("=== Testing Cross-Attention ===")
     cross_attention_output = attention_fn(x=x, y=y)
+    print(f"Cross-attention output shape: {cross_attention_output.shape}\n")
 
+    print("=== Testing Masked Self-Attention ===")
     masked_attention_output = attention_fn(x=x, mask=True)
+    print(f"Masked self-attention output shape: {masked_attention_output.shape}\n")
+
+    # Gradient check
+    loss = self_attention_output.mean()
+    loss.backward()
+    print("\nBackward pass successful — gradients computed.")
+    for name, param in attention_fn.named_parameters():
+        if param.grad is not None:
+            print(f"{name}: grad mean={param.grad.mean():.6f}")
+            break
