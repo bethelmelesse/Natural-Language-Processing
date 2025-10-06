@@ -14,7 +14,7 @@ from attention import Attention
 class EncoderLayer(nn.Module):
     """Single Transformer Encoder Layer."""
 
-    def __init__(self, d_model: int, hidden_dim: int = None, num_heads: int = 8):
+    def __init__(self, d_model: int = 512, hidden_dim: int = None, num_heads: int = 8):
         super(EncoderLayer, self).__init__()
         hidden_dim = hidden_dim or 4 * d_model
 
@@ -57,7 +57,7 @@ class EncoderStack(nn.Module):
 
     def __init__(
         self,
-        d_model: int,
+        d_model: int = 512,
         hidden_dim: int = None,
         num_layers: int = 6,
         num_heads=8,

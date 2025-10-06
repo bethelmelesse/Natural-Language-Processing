@@ -14,7 +14,7 @@ from attention import Attention
 class DecoderLayer(nn.Module):
     """Single Transformer Decoder Layer."""
 
-    def __init__(self, d_model: int, hidden_dim: int = None, num_heads=8):
+    def __init__(self, d_model: int = 512, hidden_dim: int = None, num_heads=8):
         super(DecoderLayer, self).__init__()
         hidden_dim = hidden_dim or 4 * d_model
 
@@ -70,7 +70,7 @@ class DecoderStack(nn.Module):
 
     def __init__(
         self,
-        d_model: int,
+        d_model: int = 512,
         hidden_dim: int = None,
         num_layers: int = 6,
         num_heads=8,
