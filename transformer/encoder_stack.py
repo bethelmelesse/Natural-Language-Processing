@@ -12,14 +12,16 @@ from attention import Attention
 
 
 class EncoderLayer(nn.Module):
+    """Single Transformer Encoder Layer."""
+
     def __init__(self, d_model: int, hidden_dim: int = None, num_heads: int = 8):
         super(EncoderLayer, self).__init__()
         hidden_dim = hidden_dim or 4 * d_model
 
-        # Initialize Attention Layer
+        # Self-attention for decoder
         self.self_attention = Attention(d_model=d_model, num_heads=num_heads)
 
-        # Create FeedForward Network
+        # Position-wise feed-forward network
         self.feedforward = nn.Sequential(
             nn.Linear(d_model, hidden_dim),
             nn.ReLU(),
@@ -30,15 +32,24 @@ class EncoderLayer(nn.Module):
         self.layernorm1 = nn.LayerNorm(d_model)
         self.layernorm2 = nn.LayerNorm(d_model)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Multi-head self-attention mechanism
-        attn_output = self.self_attention(x=x)
-        output = self.layernorm1(attn_output + x)
+    def forward(self, encoder_input: torch.Tensor) -> torch.Tensor:
+        """Process encoder input with attention.
 
-        # Position-wise feed-forward network
-        ff_output = self.feedforward(output)
-        output = self.layernorm2(ff_output + output)
-        return output
+        Args:
+            encoder_input: input (batch_size, src_seq_len, in_channel)
+            decoder_input: Target sequence input (batch_size, tgt_seq_len, in_channel)
+
+        Returns:
+            encoder_output: Encoded representation
+        """
+        # 1. Multi-head self-attention mechanism
+        attn_output = self.self_attention(x=encoder_input)
+        layernorm_output = self.layernorm1(attn_output + encoder_input)
+
+        # 2. Feed-Forward Network with residual connection
+        ff_output = self.feedforward(layernorm_output)
+        encoder_output = self.layernorm2(ff_output + layernorm_output)
+        return encoder_output
 
 
 class EncoderStack(nn.Module):
@@ -56,7 +67,6 @@ class EncoderStack(nn.Module):
 
         hidden_dim = hidden_dim or 4 * d_model
 
-        # Multi-head self-attention mechanism
         self.encoder_layers = nn.ModuleList(
             [
                 EncoderLayer(
@@ -77,7 +87,7 @@ class EncoderStack(nn.Module):
         """
         encoder_output = encoder_input
         for encoder_layer in self.encoder_layers:
-            encoder_output = encoder_layer(x=encoder_output)
+            encoder_output = encoder_layer(encoder_input=encoder_output)
 
         return encoder_output
 
@@ -94,7 +104,7 @@ if __name__ == "__main__":
     input = torch.rand(batch_size, seq_len, d_model)
 
     # Create dummy input
-    x = torch.rand(batch_size, seq_len, d_model)
+    encoder_input = torch.rand(batch_size, seq_len, d_model)
 
     # Initialize encoder
     encoder = EncoderStack(
@@ -104,14 +114,14 @@ if __name__ == "__main__":
     )
 
     # Run forward pass
-    output = encoder(x)
+    encoder_output = encoder(encoder_input=encoder_input)
 
     # Print results
-    print(f"Input shape:  {x.shape}")
-    print(f"Output shape: {output.shape}")
+    print(f"Input shape:  {encoder_input.shape}")
+    print(f"Output shape: {encoder_output.shape}")
 
     # Quick gradient check
-    loss = output.mean()
+    loss = encoder_output.mean()
     loss.backward()
 
     print("Backward pass successful — gradients computed.")
