@@ -23,6 +23,7 @@ class Transformer(nn.Module):
         d_ff: int = 2048,
         num_layers: int = 6,
         num_heads: int = 8,
+        dropout: float = 0.1,
     ):
         """Complete TransoTransformer model with encoder-decoder architecture."""
         super(Transformer, self).__init__()
@@ -31,10 +32,16 @@ class Transformer(nn.Module):
 
         # Embeddings
         self.source_embedding = InputEmbedding(
-            vocab_size=source_vocab_size, d_model=d_model, max_seq_len=max_seq_len
+            vocab_size=source_vocab_size,
+            d_model=d_model,
+            max_seq_len=max_seq_len,
+            dropout=dropout,
         )
         self.target_embedding = InputEmbedding(
-            vocab_size=target_vocab_size, d_model=d_model, max_seq_len=max_seq_len
+            vocab_size=target_vocab_size,
+            d_model=d_model,
+            max_seq_len=max_seq_len,
+            dropout=dropout,
         )
 
         # Initialize encoder and decoder stacks
@@ -43,12 +50,14 @@ class Transformer(nn.Module):
             d_ff=d_ff,
             num_layers=num_layers,
             num_heads=num_heads,
+            dropout=dropout,
         )
         self.decoder = DecoderStack(
             d_model=d_model,
             d_ff=d_ff,
             num_layers=num_layers,
             num_heads=num_heads,
+            dropout=dropout,
         )
 
         # Final linear projection to output vocabulary

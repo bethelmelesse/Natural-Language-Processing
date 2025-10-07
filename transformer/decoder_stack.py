@@ -14,7 +14,13 @@ from attention import Attention
 class DecoderLayer(nn.Module):
     """Single Transformer Decoder Layer."""
 
-    def __init__(self, d_model: int = 512, d_ff: int = 2048, num_heads=8):
+    def __init__(
+        self,
+        d_model: int = 512,
+        d_ff: int = 2048,
+        num_heads=8,
+        dropout: float = 0.1,
+    ):
         super(DecoderLayer, self).__init__()
 
         # Masked self-attention for decoder
@@ -35,6 +41,8 @@ class DecoderLayer(nn.Module):
         self.layernorm2 = nn.LayerNorm(d_model)
         self.layernorm3 = nn.LayerNorm(d_model)
 
+        self.dropout = nn.Dropout(dropout)
+
     def forward(self, encoder_output: torch.Tensor, decoder_input: torch.Tensor):
         """Process decoder input with attention to encoder output.
 
@@ -47,6 +55,7 @@ class DecoderLayer(nn.Module):
         """
         # 1. Masked Multi-Head Self-Attention
         masked_attention_output = self.masked_self_attention(x=decoder_input, mask=True)
+        masked_attention_output = self.dropout(masked_attention_output)
         layernorm_output = self.layernorm1(masked_attention_output + decoder_input)
 
         # 2. Cross-Attention to encoder output
@@ -55,10 +64,12 @@ class DecoderLayer(nn.Module):
             x=encoder_output,  # K, V from encoder
             y=layernorm_output,  # Q from decoder
         )
+        cross_attention_output = self.dropout(cross_attention_output)
         layernorm_output = self.layernorm2(cross_attention_output + layernorm_output)
 
         # 3. Feed-Forward Network with residual connection
         ff_output = self.feedforward(layernorm_output)
+        ff_output = self.dropout(ff_output)
         decoder_output = self.layernorm3(ff_output + layernorm_output)
 
         return decoder_output
@@ -73,13 +84,19 @@ class DecoderStack(nn.Module):
         d_ff: int = 2048,
         num_layers: int = 6,
         num_heads=8,
+        dropout: float = 0.1,
     ):
         super(DecoderStack, self).__init__()
         self.num_layers = num_layers
 
         self.decoder_layers = nn.ModuleList(
             [
-                DecoderLayer(d_model=d_model, d_ff=d_ff, num_heads=num_heads)
+                DecoderLayer(
+                    d_model=d_model,
+                    d_ff=d_ff,
+                    num_heads=num_heads,
+                    dropout=dropout,
+                )
                 for _ in range(num_layers)
             ]
         )

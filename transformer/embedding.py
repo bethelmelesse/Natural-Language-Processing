@@ -10,6 +10,7 @@ class InputEmbedding(nn.Module):
         vocab_size: int,
         d_model: int = 512,
         max_seq_len: int = 512,
+        dropout: int = 0.1,
     ):
         super().__init__()
 
@@ -25,7 +26,7 @@ class InputEmbedding(nn.Module):
 
         #  Scaling factor
         self.scale = d_model**0.5
-        self.max_seq_len = max_seq_len
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
         """
@@ -47,7 +48,7 @@ class InputEmbedding(nn.Module):
         pos_embeds = self.positional_embedding(position_ids)
 
         # Combine token embeddings and positional embedding
-        embeddings = token_embeds + pos_embeds
+        embeddings = self.dropout(token_embeds + pos_embeds)
 
         return embeddings
 

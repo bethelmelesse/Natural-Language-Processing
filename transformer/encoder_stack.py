@@ -14,7 +14,13 @@ from attention import Attention
 class EncoderLayer(nn.Module):
     """Single Transformer Encoder Layer."""
 
-    def __init__(self, d_model: int = 512, d_ff: int = 2048, num_heads: int = 8):
+    def __init__(
+        self,
+        d_model: int = 512,
+        d_ff: int = 2048,
+        num_heads: int = 8,
+        dropout: float = 0.1,
+    ):
         super(EncoderLayer, self).__init__()
 
         # Self-attention for decoder
@@ -31,6 +37,8 @@ class EncoderLayer(nn.Module):
         self.layernorm1 = nn.LayerNorm(d_model)
         self.layernorm2 = nn.LayerNorm(d_model)
 
+        self.dropout = nn.Dropout(dropout)
+
     def forward(self, encoder_input: torch.Tensor) -> torch.Tensor:
         """Process encoder input with attention.
 
@@ -43,10 +51,12 @@ class EncoderLayer(nn.Module):
         """
         # 1. Multi-head self-attention mechanism
         attn_output = self.self_attention(x=encoder_input)
+        attn_output = self.dropout(attn_output)
         layernorm_output = self.layernorm1(attn_output + encoder_input)
 
         # 2. Feed-Forward Network with residual connection
         ff_output = self.feedforward(layernorm_output)
+        ff_output = self.dropout(ff_output)
         encoder_output = self.layernorm2(ff_output + layernorm_output)
         return encoder_output
 
@@ -60,13 +70,16 @@ class EncoderStack(nn.Module):
         d_ff: int = 2048,
         num_layers: int = 6,
         num_heads=8,
+        dropout: float = 0.1,
     ):
         super(EncoderStack, self).__init__()
         self.num_layers = num_layers
 
         self.encoder_layers = nn.ModuleList(
             [
-                EncoderLayer(d_model=d_model, d_ff=d_ff, num_heads=num_heads)
+                EncoderLayer(
+                    d_model=d_model, d_ff=d_ff, num_heads=num_heads, dropout=dropout
+                )
                 for _ in range(num_layers)
             ]
         )
