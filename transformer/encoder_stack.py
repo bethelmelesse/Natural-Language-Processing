@@ -14,18 +14,17 @@ from attention import Attention
 class EncoderLayer(nn.Module):
     """Single Transformer Encoder Layer."""
 
-    def __init__(self, d_model: int = 512, hidden_dim: int = None, num_heads: int = 8):
+    def __init__(self, d_model: int = 512, d_ff: int = 2048, num_heads: int = 8):
         super(EncoderLayer, self).__init__()
-        hidden_dim = hidden_dim or 4 * d_model
 
         # Self-attention for decoder
         self.self_attention = Attention(d_model=d_model, num_heads=num_heads)
 
         # Position-wise feed-forward network
         self.feedforward = nn.Sequential(
-            nn.Linear(d_model, hidden_dim),
+            nn.Linear(d_model, d_ff),
             nn.ReLU(),
-            nn.Linear(hidden_dim, d_model),
+            nn.Linear(d_ff, d_model),
         )
 
         # Initialize layer norm
@@ -58,20 +57,16 @@ class EncoderStack(nn.Module):
     def __init__(
         self,
         d_model: int = 512,
-        hidden_dim: int = None,
+        d_ff: int = 2048,
         num_layers: int = 6,
         num_heads=8,
     ):
         super(EncoderStack, self).__init__()
         self.num_layers = num_layers
 
-        hidden_dim = hidden_dim or 4 * d_model
-
         self.encoder_layers = nn.ModuleList(
             [
-                EncoderLayer(
-                    d_model=d_model, hidden_dim=hidden_dim, num_heads=num_heads
-                )
+                EncoderLayer(d_model=d_model, d_ff=d_ff, num_heads=num_heads)
                 for _ in range(num_layers)
             ]
         )

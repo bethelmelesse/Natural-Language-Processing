@@ -20,14 +20,14 @@ class Transformer(nn.Module):
         target_vocab_size: int,
         max_seq_len: int = 512,
         d_model: int = 512,
-        hidden_dim: int = None,
+        d_ff: int = 2048,
         num_layers: int = 6,
         num_heads: int = 8,
     ):
         """Complete TransoTransformer model with encoder-decoder architecture."""
         super(Transformer, self).__init__()
 
-        hidden_dim = hidden_dim or 4 * d_model
+        d_ff = d_ff or 4 * d_model
 
         # Embeddings
         self.source_embedding = InputEmbedding(
@@ -40,13 +40,13 @@ class Transformer(nn.Module):
         # Initialize encoder and decoder stacks
         self.encoder = EncoderStack(
             d_model=d_model,
-            hidden_dim=hidden_dim,
+            d_ff=d_ff,
             num_layers=num_layers,
             num_heads=num_heads,
         )
         self.decoder = DecoderStack(
             d_model=d_model,
-            hidden_dim=hidden_dim,
+            d_ff=d_ff,
             num_layers=num_layers,
             num_heads=num_heads,
         )

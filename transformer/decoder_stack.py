@@ -14,9 +14,8 @@ from attention import Attention
 class DecoderLayer(nn.Module):
     """Single Transformer Decoder Layer."""
 
-    def __init__(self, d_model: int = 512, hidden_dim: int = None, num_heads=8):
+    def __init__(self, d_model: int = 512, d_ff: int = 2048, num_heads=8):
         super(DecoderLayer, self).__init__()
-        hidden_dim = hidden_dim or 4 * d_model
 
         # Masked self-attention for decoder
         self.masked_self_attention = Attention(d_model=d_model, num_heads=num_heads)
@@ -26,9 +25,9 @@ class DecoderLayer(nn.Module):
 
         # Position-wise feed-forward network
         self.feedforward = nn.Sequential(
-            nn.Linear(d_model, hidden_dim),
+            nn.Linear(d_model, d_ff),
             nn.ReLU(),
-            nn.Linear(hidden_dim, d_model),
+            nn.Linear(d_ff, d_model),
         )
 
         # Initialize layer norm
@@ -71,20 +70,16 @@ class DecoderStack(nn.Module):
     def __init__(
         self,
         d_model: int = 512,
-        hidden_dim: int = None,
+        d_ff: int = 2048,
         num_layers: int = 6,
         num_heads=8,
     ):
         super(DecoderStack, self).__init__()
         self.num_layers = num_layers
 
-        hidden_dim = hidden_dim or 4 * d_model
-
         self.decoder_layers = nn.ModuleList(
             [
-                DecoderLayer(
-                    d_model=d_model, hidden_dim=hidden_dim, num_heads=num_heads
-                )
+                DecoderLayer(d_model=d_model, d_ff=d_ff, num_heads=num_heads)
                 for _ in range(num_layers)
             ]
         )
