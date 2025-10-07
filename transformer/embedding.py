@@ -13,8 +13,19 @@ class InputEmbedding(nn.Module):
     ):
         super().__init__()
 
-        self.token_embedding = nn.Embedding(vocab_size, d_model)
-        self.positional_embedding = nn.Embedding(max_seq_len, d_model)
+        # Token embedding
+        self.token_embedding = nn.Embedding(
+            num_embeddings=vocab_size, embedding_dim=d_model
+        )
+
+        # Learned positional embedding
+        self.positional_embedding = nn.Embedding(
+            num_embeddings=max_seq_len, embedding_dim=d_model
+        )
+
+        #  Scaling factor
+        self.scale = d_model**0.5
+        self.max_seq_len = max_seq_len
 
     def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
         """
@@ -23,10 +34,10 @@ class InputEmbedding(nn.Module):
         Returns:
             embeddings: (batch_size, seq_len, d_model)
         """
-        seq_len = input_ids.size(1)
+        batch_size, seq_len = input_ids.shape
 
-        # Token embeddings
-        token_embeds = self.token_embedding(input_ids)
+        # Token embeddings (batch_size, seq_len, d_model)
+        token_embeds = self.token_embedding(input_ids) * self.scale
 
         # Position IDs: [0, 1, 2, ..., seq_len-1]
         position_ids = torch.arange(seq_len, dtype=torch.long, device=input_ids.device)
