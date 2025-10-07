@@ -1,0 +1,27 @@
+# config.yaml
+project_name: "transformer_base_model"
+
+model:
+  _target_: transformer
+  source_vocab_size: null
+  target_vocab_size: null
+  max_seq_len: 512
+  d_model: 512
+  d_ff: 2048
+  num_layers: 6
+  num_heads: 8
+  dropout: 0.1
+
+# optimizer
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 1
+  betas: (0.9, 0.98)
+  eps: 1e-09
+
+# Scheduler - to be implemented
+warmup_Steps: 4000
+
+
+# Regularization - to be implemented
+label_smoothing: 0.1
