@@ -1,0 +1,43 @@
+base_model:
+  source_vocab_size: null
+  target_vocab_size: null
+  max_seq_len: 512
+  d_model: 512
+  d_ff: 2048
+  num_layers: 6
+  num_heads: 8
+  dropout: 0.1
+
+
+# Optimizer
+optimizer:
+  lr: 1.0
+  betas: (0.9, 0.98)
+  eps: 1e-09
+
+# Scheduler
+scheduler: 
+  warmup_steps: 4000
+
+
+# Regularization
+loss: 
+  label_smoothing: 0.1
+
+
+# Training Hyperparameters
+training:
+  batch_size: null
+  total_epochs: null
+  total_steps: null
+  cuda: null
+
+# Directories
+output_dir:
+  base_dir: "results"
+  checkpoint_dir: "checkpoints"
+  tensorboard_dir: "tensorboard"
+  result_dir: "results"
+
+
+
