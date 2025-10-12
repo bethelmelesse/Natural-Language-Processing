@@ -1,1 +1,6 @@
 transformer/__pycache__/*
+transformer/scripts/__pycache__/*
+transformer/model/__pycache__/*
+utils/__pycache__/*
+data/*
+transformer/datasets/__pycache__/*
