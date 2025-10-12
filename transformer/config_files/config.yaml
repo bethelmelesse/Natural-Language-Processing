@@ -1,6 +1,33 @@
+data:
+  max_len: 512
+  batch_size: 10000
+  subset: 0.025
+  data_dir: "data"
+  tokenized_data_dir: "data/tokenized"
+
+de_en:
+  vocab_size: 37000
+  source_vocab_size: 37000 ## tobe changed
+  target_vocab_size: 37000 ## tobe changed
+  source_language: "en"
+  target_language: "de"
+  hf_dataset_path: "wmt14"
+  dataset_name: "de-en"
+  tokenizer_path: "Helsinki-NLP/opus-mt-en-de"
+
+
+fr_en:
+  vocab_size: 32000
+  source_vocab_size: 32000 ## tobe changed
+  target_vocab_size: 32000 ## tobe changed
+  source_language: "en"
+  target_language: "fr"
+  hf_dataset_path: "wmt14"
+  dataset_name: "fr-en"
+  tokenizer_path: "Helsinki-NLP/opus-mt-en-fr"
+  
+
 base_model:
-  source_vocab_size: null
-  target_vocab_size: null
   max_seq_len: 512
   d_model: 512
   d_ff: 2048
@@ -30,7 +57,7 @@ training:
   batch_size: null
   total_epochs: null
   total_steps: null
-  cuda: null
+  cuda: 0
 
 # Directories
 output_dir:
