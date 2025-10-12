@@ -1,16 +1,9 @@
 import torch
 from torch import nn
-import os
-import sys
 
-current_dir = os.path.abspath(__file__)
-parent_dir = os.path.dirname(current_dir)
-grandparent_dir = os.path.dirname(parent_dir)
-sys.path.append(grandparent_dir)
-
-from encoder_stack import EncoderStack
-from decoder_stack import DecoderStack
-from embedding import InputEmbedding
+from transformer.model.encoder_stack import EncoderStack
+from transformer.model.decoder_stack import DecoderStack
+from transformer.model.embedding import InputEmbedding
 
 
 class Transformer(nn.Module):
