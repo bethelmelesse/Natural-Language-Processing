@@ -32,12 +32,15 @@ class EncoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, encoder_input: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, encoder_input: torch.Tensor, source_mask: torch.Tensor = None
+    ) -> torch.Tensor:
         """Process encoder input with attention.
 
         Args:
             encoder_input: input (batch_size, src_seq_len, in_channel)
             decoder_input: Target sequence input (batch_size, tgt_seq_len, in_channel)
+            source_mask: Source padding mask (batch_size, source_seq_len)
 
         Returns:
             encoder_output: Encoded representation
@@ -77,18 +80,21 @@ class EncoderStack(nn.Module):
             ]
         )
 
-    def forward(self, encoder_input: torch.Tensor):
+    def forward(self, encoder_input: torch.Tensor, source_mask: torch.Tensor = None):
         """Process input through encoder layers.
 
         Args:
             encoder_input: Input tensor of shape (batch_size, seq_len, d_model)
+            source_mask: Source padding mask (batch_size, source_seq_len)
 
         Returns:
             encoder_output: Encoded representation
         """
         encoder_output = encoder_input
         for encoder_layer in self.encoder_layers:
-            encoder_output = encoder_layer(encoder_input=encoder_output)
+            encoder_output = encoder_layer(
+                encoder_input=encoder_output, source_mask=source_mask
+            )
 
         return encoder_output
 

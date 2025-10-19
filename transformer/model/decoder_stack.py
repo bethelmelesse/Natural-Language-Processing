@@ -36,12 +36,20 @@ class DecoderLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, encoder_output: torch.Tensor, decoder_input: torch.Tensor):
+    def forward(
+        self,
+        encoder_output: torch.Tensor,
+        decoder_input: torch.Tensor,
+        source_mask: torch.Tensor = None,
+        target_mask: torch.Tensor = None,
+    ):
         """Process decoder input with attention to encoder output.
 
         Args:
             encoder_output: Output from encoder (batch_size, src_seq_len, in_channel)
             decoder_input: Target sequence input (batch_size, tgt_seq_len, in_channel)
+            source_mask: Source padding mask (batch_size, source_seq_len)
+            target_mask: Target padding mask (batch_size, target_seq_len)
 
         Returns:
             decoder_output: Decoded representation
@@ -98,12 +106,16 @@ class DecoderStack(nn.Module):
         self,
         decoder_input: torch.Tensor,
         encoder_output: torch.Tensor,
+        source_mask: torch.Tensor = None,
+        target_mask: torch.Tensor = None,
     ) -> torch.Tensor:
         """Process input through encoder layers.
 
         Args:
             decoder_input: Target sequence (batch_size, tgt_seq_len, d_model)
             encoder_output: Encoder output (batch_size, src_seq_len, d_model)
+            source_mask: Source padding mask (batch_size, source_seq_len)
+            target_mask: Target padding mask (batch_size, target_seq_len)
 
         Returns:
             decoder_output: Decoded representation
@@ -113,6 +125,8 @@ class DecoderStack(nn.Module):
             decoder_output = decoder_layer(
                 decoder_input=decoder_output,
                 encoder_output=encoder_output,
+                source_mask=source_mask,
+                target_mask=target_mask,
             )
 
         return decoder_output

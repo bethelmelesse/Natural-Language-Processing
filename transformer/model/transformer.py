@@ -65,12 +65,20 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, source: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        source: torch.Tensor,
+        target: torch.Tensor,
+        source_mask: torch.Tensor = None,
+        target_mask: torch.Tensor = None,
+    ) -> torch.Tensor:
         """Forward pass through the transformer.
 
         Args:
             source: Source sequence token indices (batch_size, source_seq_len)
             target: Target sequence token indices (batch_size, target_seq_len)
+            source_mask: Source padding mask (batch_size, source_seq_len)
+            target_mask: Target padding mask (batch_size, target_seq_len)
 
         Returns:
             logits: Output logits (batch_size, target_seq_len, target_vocab_size)
@@ -80,11 +88,16 @@ class Transformer(nn.Module):
         target_embed = self.target_embedding(input_ids=target)
 
         # Encode source sequence
-        encoder_output = self.encoder(encoder_input=source_embed)
+        encoder_output = self.encoder(
+            encoder_input=source_embed, source_mask=source_mask
+        )
 
         # Decode target sequence
         decoder_output = self.decoder(
-            encoder_output=encoder_output, decoder_input=target_embed
+            encoder_output=encoder_output,
+            decoder_input=target_embed,
+            source_mask=source_mask,
+            target_mask=target_mask,
         )
         # Project to output vocabulary size
         logits = self.linear(decoder_output)
