@@ -9,6 +9,7 @@ import yaml
 import argparse
 from datetime import datetime
 from transformers import get_linear_schedule_with_warmup
+from transformers import AutoTokenizer
 import ast
 from datasets import load_from_disk
 
@@ -98,7 +99,9 @@ class Training:
             # Define specific output directories
             self.checkpoint_dir = os.path.join(base_dir, output_dir["checkpoint_dir"])
             self.tensorboard_dir = os.path.join(base_dir, output_dir["tensorboard_dir"])
-            self.result_dir = os.path.join(base_dir, output_dir["result_dir"])
+            self.result_dir = os.path.join(
+                base_dir, "training", output_dir["result_dir"]
+            )
 
             # Create all directories
             for directories in [
@@ -156,6 +159,8 @@ class Training:
 
         # ==================== Dataset Configuration ====================
         dataset = self.config[self.training_dataset]
+        tokenizer_path = dataset["tokenizer_path"]
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
         self.processed_data_dir = dataset["processed_data_dir"]
         self.vocab_size = dataset["vocab_size"]  # Shared vocab size for both languages
 
@@ -186,6 +191,73 @@ class Training:
         logger.info(f"Validation set: {len(self.valid_set):,} examples")
         return
 
+    def _collate_fn(self, batch):
+        """
+        Collate function for batching variable-length sequences.
+
+        Pads sequences to the maximum length in the batch and prepares tensors for model input.
+
+        Args:
+            batch: List of dataset items, each containing 'input_ids', 'attention_mask', and 'labels'.
+
+        Returns:
+            dict: Batch dictionary with padded 'input_ids', 'attention_mask', and 'labels' tensors.
+
+        Notes:
+            - Pad token ID: Keeps input valid for embedding layer (but ignored via mask)
+            - 0 in mask: Explicitly tells attention mechanism "ignore this"
+            - -100 in labels: Tells loss function "don't compute loss for this position"
+
+        Example:
+            Original sequences (different lengths)::
+
+                input_ids: [465, 32932, 7, 4, 6274, 0]
+                labels:    [35999, 9, 4371, 25478, 0]
+
+            After padding to length 10::
+
+                input_ids: [465, 32932, 7, 4, 6274, 0, 0, 0, 0, 0]
+                mask:      [1,   1,     1, 1, 1,    1, 0, 0, 0, 0]
+                labels:    [35999, 9, 4371, 25478, 0, -100, -100, -100, -100, -100]
+        """
+        # Extract Sequence
+        input_ids = []
+        attention_mask = []
+        labels = []
+        for item in batch:
+            input_ids.append(item["input_ids"])
+            attention_mask.append(item["attention_mask"])
+            labels.append(item["labels"])
+
+        # Max lengths
+        max_input_len = max(len(ids) for ids in input_ids)
+        max_label_len = max(len(label) for label in labels)
+
+        # Pad input_ids and attention
+        input_ids_padded = []
+        attention_mask_padded = []
+        for ids, mask in zip(input_ids, attention_mask):
+            pad_len = max_input_len - len(ids)
+            input_ids_padded.append(ids + [self.tokenizer.pad_token_id] * pad_len)
+            # The attention mask is a binary indicator: 1 = attend, 0 = ignore
+            # Setting mask to 0 tells the model "don't pay attention to this position"
+            attention_mask_padded.append(mask + [0] * pad_len)
+
+        # Pad Labels
+        labels_padded = []
+        for label in labels:
+            pad_len = max_label_len - len(label)
+            # -100 is a special value in PyTorch's loss functions
+            # CrossEntropyLoss and NLLLoss ignore targets with value -100
+            # Without this, the model would try to predict padding tokens, which is meaningless
+            labels_padded.append(label + [-100] * pad_len)  # -100 is ignored in loss
+
+        return {
+            "input_ids": torch.tensor(input_ids_padded, dtype=torch.long),
+            "attention_mask": torch.tensor(attention_mask_padded, dtype=torch.long),
+            "labels": torch.tensor(labels_padded, dtype=torch.long),
+        }
+
     def _initialize_dataloader(self) -> None:
         """Initialize PyTorch DataLoaders for training and validation.
 
@@ -197,11 +269,18 @@ class Training:
             None
         """
         logger.info("Initializing Dataloader...")
+
         self.train_loader = DataLoader(
-            self.train_set, batch_size=self.batch_size, shuffle=True
+            self.train_set,
+            batch_size=self.batch_size,
+            shuffle=True,
+            collate_fn=self._collate_fn,
         )
         self.val_loader = DataLoader(
-            self.valid_set, batch_size=self.batch_size, shuffle=False
+            self.valid_set,
+            batch_size=self.batch_size,
+            shuffle=False,
+            collate_fn=self._collate_fn,
         )
 
     def _initialize_model(self) -> None:
