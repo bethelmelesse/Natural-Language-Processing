@@ -297,7 +297,7 @@ class Training:
             optimizer=self.optimizer,
             criterion=self.criterion,
             total_epochs=self.total_epochs,
-            total_steps = self.total_steps
+            total_steps=self.total_steps,
             lr_scheduler=self.lr_scheduler,
             device=self.device,
             checkpoint_dir=self.checkpoint_dir,

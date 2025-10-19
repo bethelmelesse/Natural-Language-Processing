@@ -33,18 +33,18 @@ class DatasetPreparation:
     2. Initializing pretrained tokenizers
     3. Tokenizing and caching processed datasets"""
 
-    def __init__(self, config, training_dataset) -> None:
+    def __init__(self, config, dataset_name) -> None:
         """
         Initialize the DatasetPreparation instance.
 
         Args:
             config (dict): Configuration dictionary with dataset and training parameters
-            training_dataset (str): Key identifying which dataset config to use
+            dataset_name (str): Key identifying which dataset config to use
         Returns:
             None
         """
         self.config = config
-        self.training_dataset = training_dataset
+        self.dataset_name = dataset_name
         self._load_config()
 
     def _load_config(self) -> None:
@@ -63,7 +63,7 @@ class DatasetPreparation:
         tokenized_data_dir = data["tokenized_data_dir"]
 
         # Extract dataset-specific configuration
-        dataset: dict = self.config[self.training_dataset]
+        dataset: dict = self.config[self.dataset_name]
 
         # HuggingFace dataset identifiers
         self.hf_dataset_path: str = dataset["hf_dataset_path"]  # e.g., "wmt14"
@@ -240,9 +240,9 @@ def get_args() -> argparse.Namespace:
         help="Path to YAML configuration file containing hyperparameters and dataset settings.",
     )
     parser.add_argument(
-        "--training_dataset",
+        "--dataset_name",
         type=str,
-        default="fr_en",
+        default="de_en",
         help="Dataset identifier key from the config file (e.g., 'de_en', 'fr_en').",
     )
     args = parser.parse_args()
@@ -260,9 +260,7 @@ def main() -> None:
         config = yaml.safe_load(file)
 
     # Initialize dataset preparation handler
-    prepare_data = DatasetPreparation(
-        config=config, training_dataset=args.training_dataset
-    )
+    prepare_data = DatasetPreparation(config=config, dataset_name=args.dataset_name)
 
     # Execute the preparation pipeline
     prepare_data()
