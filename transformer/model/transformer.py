@@ -83,11 +83,9 @@ class Transformer(nn.Module):
         Returns:
             logits: Output logits (batch_size, target_seq_len, target_vocab_size)
         """
-        # shift target
-        target_shifted = target[:, :-1]  # ?????
         # Embed inputs
         source_embed = self.source_embedding(input_ids=source)
-        target_embed = self.target_embedding(input_ids=target_shifted)
+        target_embed = self.target_embedding(input_ids=target)
 
         # Encode source sequence
         encoder_output = self.encoder(

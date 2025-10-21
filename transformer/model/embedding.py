@@ -10,7 +10,7 @@ class InputEmbedding(nn.Module):
         vocab_size: int,
         d_model: int = 512,
         max_seq_len: int = 512,
-        dropout: int = 0.1,
+        dropout: float = 0.1,
     ):
         super().__init__()
 
@@ -55,14 +55,18 @@ class InputEmbedding(nn.Module):
 
 if __name__ == "__main__":
     torch.manual_seed(42)
-
     batch_size = 2
     seq_length = 200
+    vocab_size = 1000  # Vocabulary size should be separate from seq_length
 
-    # Create dummy input
-    input_ids = torch.rand(batch_size, seq_length).long()
-    input_embeddings = InputEmbedding(vocab_size=seq_length)
+    # Create dummy input with valid token IDs in range [0, vocab_size)
+    input_ids = torch.randint(0, vocab_size, (batch_size, seq_length))
+
+    input_embeddings = InputEmbedding(vocab_size=vocab_size, max_seq_len=seq_length)
     embedding = input_embeddings(input_ids=input_ids)
 
     print(f"Input shape:  {input_ids.shape}")
     print(f"Output shape: {embedding.shape}")
+    print(
+        f"Expected output shape: (batch_size={batch_size}, seq_len={seq_length}, d_model=512)"
+    )

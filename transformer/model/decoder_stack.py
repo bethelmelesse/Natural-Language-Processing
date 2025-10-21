@@ -55,7 +55,9 @@ class DecoderLayer(nn.Module):
             decoder_output: Decoded representation
         """
         # 1. Masked Multi-Head Self-Attention
-        masked_attention_output = self.masked_self_attention(x=decoder_input, mask=True)
+        masked_attention_output = self.masked_self_attention(
+            x=decoder_input, attention_mask=target_mask, mask=True
+        )
         masked_attention_output = self.dropout(masked_attention_output)
         layernorm_output = self.layernorm1(masked_attention_output + decoder_input)
 
@@ -64,6 +66,7 @@ class DecoderLayer(nn.Module):
         cross_attention_output = self.cross_attention(
             x=encoder_output,  # K, V from encoder
             y=layernorm_output,  # Q from decoder
+            attention_mask=source_mask,
         )
         cross_attention_output = self.dropout(cross_attention_output)
         layernorm_output = self.layernorm2(cross_attention_output + layernorm_output)

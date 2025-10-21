@@ -8,7 +8,7 @@ class ScaledDotProductAttention(nn.Module):
 
         self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, query, keys, values, mask: bool = None):
+    def forward(self, query, keys, values, attention_mask=None, mask: bool = None):
         """
         Args:
             query: with shape [batch_size, num_heads, seq_length, dim]
@@ -27,6 +27,16 @@ class ScaledDotProductAttention(nn.Module):
         # --- divide scores by the square root of key dimension
         dk = torch.tensor(keys.shape[2])
         scaled_score = qk_score / torch.sqrt(dk).float()
+
+        # Applying padding mask (from attention_mask)
+        if attention_mask:
+            # Reshape attention_mask to broadcast correctly
+            # From (batch_size, seq_length) to (batch_size, 1, 1, seq_length)
+            if attention_mask.dim() == 2:
+                attention_mask = attention_mask.unsqueeeze(1).unsqueeze(2)
+            # convert to boolean: 0 (padding) -> True (mask), 1 (real) -> False (keep)
+            padding_mask = attention_mask == 0
+            scaled_score.masked_fill(padding_mask, float("-inf"))
 
         # Step 7: Apply mask if indicated
         if mask:
@@ -62,7 +72,11 @@ class Attention(nn.Module):
         self.out_proj = nn.Linear(in_features=d_model, out_features=d_model)
 
     def forward(
-        self, x: torch.Tensor, y: torch.Tensor = None, mask: bool = False
+        self,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        attention_mask: torch.Tensor,
+        mask: bool = False,
     ) -> torch.Tensor:
         # Check if it is self or cross attention
         y = x if y is None else y
@@ -91,7 +105,11 @@ class Attention(nn.Module):
         values = torch.transpose(values, dim0=1, dim1=2)
 
         scaled_dot_product_attention_output = self.scaled_dot_product_attention(
-            query=query, keys=keys, values=values, mask=mask
+            query=query,
+            keys=keys,
+            values=values,
+            attention_mask=attention_mask,
+            mask=mask,
         )
 
         # Test

@@ -46,7 +46,7 @@ class EncoderLayer(nn.Module):
             encoder_output: Encoded representation
         """
         # 1. Multi-head self-attention mechanism
-        attn_output = self.self_attention(x=encoder_input)
+        attn_output = self.self_attention(x=encoder_input, attention_mask=source_mask)
         attn_output = self.dropout(attn_output)
         layernorm_output = self.layernorm1(attn_output + encoder_input)
 
