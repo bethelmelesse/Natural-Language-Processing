@@ -162,7 +162,8 @@ class Training:
         tokenizer_path = dataset["tokenizer_path"]
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
         self.processed_data_dir = dataset["processed_data_dir"]
-        self.vocab_size = dataset["vocab_size"]  # Shared vocab size for both languages
+        # self.vocab_size = dataset["vocab_size"]  # Shared vocab size for both languages if using Custom BPE Tokenizer
+        self.vocab_size = len(self.tokenizer)
 
     def _load_dataset(self) -> None:
         """Load pre-tokenized datasets from disk.
@@ -379,6 +380,7 @@ class Training:
             total_steps=self.total_steps,
             lr_scheduler=self.lr_scheduler,
             device=self.device,
+            vocab_size=self.vocab_size,
             checkpoint_dir=self.checkpoint_dir,
             tensorboard_dir=self.tensorboard_dir,
             result_dir=self.result_dir,

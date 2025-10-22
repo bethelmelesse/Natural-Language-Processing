@@ -83,8 +83,11 @@ class Transformer(nn.Module):
         Returns:
             logits: Output logits (batch_size, target_seq_len, target_vocab_size)
         """
-        # Embed inputs
+
+        # Embed inputs -  # (batch_size, seq_len, d_model)
         source_embed = self.source_embedding(input_ids=source)
+
+        target[target == -100] = 0
         target_embed = self.target_embedding(input_ids=target)
 
         # Encode source sequence

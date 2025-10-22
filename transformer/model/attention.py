@@ -29,11 +29,11 @@ class ScaledDotProductAttention(nn.Module):
         scaled_score = qk_score / torch.sqrt(dk).float()
 
         # Applying padding mask (from attention_mask)
-        if attention_mask:
+        if attention_mask is not None:
             # Reshape attention_mask to broadcast correctly
             # From (batch_size, seq_length) to (batch_size, 1, 1, seq_length)
             if attention_mask.dim() == 2:
-                attention_mask = attention_mask.unsqueeeze(1).unsqueeze(2)
+                attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
             # convert to boolean: 0 (padding) -> True (mask), 1 (real) -> False (keep)
             padding_mask = attention_mask == 0
             scaled_score.masked_fill(padding_mask, float("-inf"))
@@ -74,8 +74,8 @@ class Attention(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        y: torch.Tensor,
-        attention_mask: torch.Tensor,
+        y: torch.Tensor = None,
+        attention_mask: torch.Tensor = None,
         mask: bool = False,
     ) -> torch.Tensor:
         # Check if it is self or cross attention

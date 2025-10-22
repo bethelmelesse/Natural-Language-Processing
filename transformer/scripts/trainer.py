@@ -2,13 +2,15 @@
 
 import logging
 import os
-from transformers import AutoTokenizer
 
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+from data import get_input_data
+from utils.train_utils import write_to_tensorboard
+
 
 # from utils.train_utils import log_result, write_to_tensorboard, write_to_csv
 
@@ -33,6 +35,7 @@ class Trainer:
         total_steps: int,
         lr_scheduler: optim.lr_scheduler,
         device: str,
+        vocab_size,
         checkpoint_dir: str = None,
         tensorboard_dir: str = None,
         result_dir: str = None,
@@ -58,6 +61,7 @@ class Trainer:
         self.checkpoint_dir = checkpoint_dir
         self.tensorboard_dir = tensorboard_dir
         self.result_dir = result_dir
+        self.vocab_size = vocab_size
 
         self.sigmoid = nn.Sigmoid()
         self.model.to(self.device)
@@ -131,7 +135,7 @@ class Trainer:
         self.model.train() if is_training else self.model.eval()
 
         # Initialize accumulators
-        epoch_loss = {"BCE_loss": 0.0}
+        bce_loss = 0
 
         loader = self.train_loader if is_training else self.val_loader
         # sample size
@@ -143,19 +147,24 @@ class Trainer:
         for batch_idx, batch_data in enumerate(progress_bar):
             cur_step = batch_idx + (epoch - 1) * total_batches
             # Get data
-            input_ids, attention_mask, labels = self._get_data(batch_data=batch_data)
-            input_ids, attention_mask, labels = (
-                input_ids.to(self.device),
-                attention_mask.to(self.device),
-                labels.to(self.device),
+            source_ids, target_ids, source_mask, target_mask, labels = get_input_data(
+                batch_data=batch_data
             )
 
             # Forward Pass
-            logit = self.model(source=input_ids, target=labels)
+            logits = self.model(
+                source=source_ids.to(self.device),
+                target=target_ids.to(self.device),
+                source_mask=source_mask.to(self.device),
+                target_mask=target_mask.to(self.device),
+            )
 
             # Calculate loss
-            loss = self.criterion(logit, labels)  # Batch loss
-            epoch_loss += loss
+            # (batch_size, seq_len, vocab_size) -> (batch_size*seq_len, vocab_size)
+            logits = logits.view(-1, self.vocab_size)  # (batch_size, seq_len)
+            labels = labels.flatten()
+            loss = self.criterion(logits, labels.to(self.device))  # Batch loss
+            bce_loss += loss
 
             # Backward Pass (training only)
             if is_training:
@@ -177,26 +186,26 @@ class Trainer:
             #             )
             #         self.optimizer.step()
 
-            mode = "Train(step)" if is_training else "Validation(Step)"
-            write_to_tensorboard(
-                epoch=cur_step,
-                epoch_loss=loss,
-                grad_norm=total_grad_norm,
-                writer=self.writer,
-                mode=mode,
-            )
+            mode = "Train(Step)" if is_training else "Validation(Step)"
+
+            if self.tensorboard_dir is not None:
+                write_to_tensorboard(
+                    epoch=cur_step,
+                    epoch_loss={"BCE Loss (batch)": loss.item()},
+                    grad_norm=total_grad_norm,
+                    writer=self.writer,
+                    mode=mode,
+                )
 
             # Update progress bar with current batch loss
             progress_bar.set_postfix(
                 {
-                    "loss": f"{epoch_loss.item():.4f}",
+                    "loss": f"{loss.item():.4f}",
                     "lr": f"{self.optimizer.param_groups[0]['lr']:.2e}",
                 }
             )
 
-        # Update epoch loss
-        for loss_key in epoch_loss:
-            epoch_loss[loss_key] /= total_batches
+        epoch_loss = {"BCE Loss (Epoch)": bce_loss}
 
         return epoch_loss
 
@@ -216,13 +225,6 @@ class Trainer:
 
         total_norm = total_norm ** (1.0 / norm_type)
         return total_norm
-
-    def _get_data(self, batch_data) -> tuple[torch.Tensor, torch.Tensor]:
-        """Extract input and target data from batch."""
-        input_ids = batch_data["input_ids"]
-        attention_mask = batch_data["attention_mask"]
-        labels = batch_data["labels"]
-        return input_ids, attention_mask, labels
 
     def _visulaize(self, epoch, epoch_loss, epoch_metrics, mode):
         # Get learning rate
